@@ -11,22 +11,19 @@ const BufferManager = function() {
 	}
 	this.zArray = [];
 	this.newBuffer = function(x, y, width, height, zIndex = 0) {
-		const newBuffer = new DisplayBuffer(x, y, width, height, this, zIndex);
-		const bufferObj = newBuffer;
-		if (this.zArray.length > 0) this.zArray.splice(sortedIndex(this.zArray, zIndex), 0, bufferObj);
-		else this.zArray.push(bufferObj);
-		return newBuffer;
+		const buffer = new DisplayBuffer(x, y, width, height, this, zIndex);
+		if (this.zArray.length > 0) this.zArray.splice(sortedIndex(this.zArray, zIndex), 0, buffer);
+		else this.zArray.push(buffer);
+		return buffer;
 	}
 	this.somethingAbove = function(target, x, y) {
 		let found = false;
 		for (const buffer of this.zArray) {
 			const index = buffer.screenToIndex(x, y);
 			if (found && index != null) {
-				// if (buffer.previous[index] == undefined) return false;
+				if (!buffer.transparent) return true;
 				const code = buffer.previous[index];
-				if (code != 0) {
-					return true;
-				}
+				if (code != 0) return true;
 			}
 			if (buffer.id == target.id) found = true;
 		}
@@ -40,10 +37,8 @@ const BufferManager = function() {
 			if (found && index != null) {
 				const code = buffer.previous[index];
 				const color = buffer.prevColors[index];
-				if (code != 0 || color != 0) return {
-					char: code,
-					color: color
-				};
+				if (code != 0 || color != 0) return { char: code, color: color };
+				else if (!buffer.transparent) return false;
 			}
 			if (buffer.id == target.id) found = true; 
 		}
@@ -82,14 +77,13 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 	this.empty = true;
 	this.outlined = false;
 	this.zIndex = zIndex;
+	this.transparent = true;
 	this.id = crypto.randomBytes(32);
 
 	function bufferWithSpaces(size) {
 		let buffer = new Uint16Array(size);
 		return buffer.fill(32);
 	}
-	// this.current = bufferWithSpaces(this.size);
-	// this.previous = bufferWithSpaces(this.size);
 	this.current = new Uint16Array(this.size);
 	this.previous = new Uint16Array(this.size);
 	this.colors = new Uint8Array(this.size);
@@ -136,25 +130,24 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 		process.stdout.cursorTo(x, y);
 		process.stdout.write(string);
 	}
-	let drawCount = 0;
-	let colorChangeCount = 0;
 	this.render = function(clearLastFrame = true, debug = false) {
 		for (let i = 0; i < this.size; i++) {
-			const screenLocation = this.indexToScreen(i);
 			const code = this.current[i];
-			let drawingCode = code;
 			const prevCode = this.previous[i];
 			const colorCode = this.colors[i];
-			let drawingColorCode = colorCode;
 			const prevColorCode = this.prevColors[i];
-			if (code == 0 && clearLastFrame) {
+
+			const screenLocation = this.indexToScreen(i);
+			let drawingCode = code;
+			let drawingColorCode = colorCode;
+			if (code == 0 && prevCode != 0 && clearLastFrame) {
 				const below = manager.somethingBelow(this, screenLocation.x, screenLocation.y);
 				if (below) {
 					drawingCode = below.char;
 					drawingColorCode = below.color;
 				} else {
 					drawingCode = 32;
-					// drawingColorCode = 0;
+					drawingColorCode = 0;
 				}
 			}
 			if (code != prevCode || colorCode != prevColorCode) {
@@ -162,36 +155,19 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 					const fgCode = drawingColorCode >> 4;
 					const bgCode = drawingColorCode & 0x0F;
 					if (drawingColorCode != manager.lastRenderedColor) {
-						if (fgCode == 0 || bgCode == 0) {
-							process.stdout.write('\x1b[0m');
-						}
-						if (fgCode > 0) {
-							process.stdout.write('\x1b[' + (29 + fgCode).toString() + 'm');
-						}
-						if (bgCode > 0) {
-							process.stdout.write('\x1b[' + (39 + bgCode).toString() + 'm');
-						}
+						if (fgCode == 0 || bgCode == 0) process.stdout.write('\x1b[0m');
+						if (fgCode > 0) process.stdout.write('\x1b[' + (29 + fgCode).toString() + 'm');
+						if (bgCode > 0) process.stdout.write('\x1b[' + (39 + bgCode).toString() + 'm');
 					}
 					drawToScreen(String.fromCharCode(drawingCode), screenLocation.x, screenLocation.y);
 					manager.lastRenderedColor = drawingColorCode;
-					drawCount++;
 				}
 			}
 			this.current[i] = 0;
-			// this.previous[i] = (code == 32) ? 0 : code;
 			this.previous[i] = code;
 			this.colors[i] = 0;
 			this.prevColors[i] = colorCode;
 		}
-		if (debug) {
-			drawToScreen('                ', this.x, this.y - 2);
-			drawToScreen('painted ' + drawCount.toString() + ' chars', this.x, this.y - 2);
-			drawToScreen('                          ', this.x, this.y + this.height + 1);
-			drawToScreen('changed color ' + colorChangeCount.toString() + ' times', this.x, this.y + this.height + 1);
-		}
-		if (drawCount > 0) this.empty = false;
-		drawCount = 0;
-		colorChangeCount = 0;
 	}
 	this.paint = () => this.render(false); // For adding to the canvas without it clearing
 	this.fill = function(color, char = ' ') {
@@ -271,5 +247,3 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 }
 
 module.exports = BufferManager;
-// module.exports.BufferManager = BufferManager;
-// module.exports.DisplayBuffer = DisplayBuffer;
