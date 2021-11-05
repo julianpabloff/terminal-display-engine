@@ -23,20 +23,12 @@ async function test() {
 	const bufferX = Math.floor(columns / 2 - bufferWidth / 2);
 	const bufferY = Math.floor(rows / 2 - bufferHeight / 2);
 
-	// const manager = new BufferModule.BufferManager();
-
-	// const buffer = new BufferModule.DisplayBuffer(bufferX, bufferY, bufferWidth, bufferHeight, manager);
-	// buffer.outline('red');
-
-	// const second = new BufferModule.DisplayBuffer(bufferX + 10, bufferY + 5, 10, 5, manager, 1);
-	// second.outline('green');
-
 	const manager = new BufferManager();
 	const buffer = manager.newBuffer(bufferX, bufferY, bufferWidth, bufferHeight);
 	// const third = manager.newBuffer(bufferX + 40, bufferY + 20, 60, 10, 3);
 	const second = manager.newBuffer(bufferX + 10, bufferY + 5, bufferWidth - 20, bufferHeight - 10, 2);
 	buffer.outline('red');
-	second.outline('green');
+	// second.outline('green');
 	// third.outline('blue');
 
 	const blob = [
@@ -56,16 +48,19 @@ async function test() {
 		'00000000000',
 	];
 	function drawThing(x, y, thing) {
+		let buf = (thing == blob) ? buffer : second;
 		if (thing == blob) manager.setColor('green', 'blue');
-		else manager.setColor('blue', 'green');
+		else manager.setColor('black', 'blue');
 		for (let i = 0; i < thing.length; i++) {
-			buffer.draw(thing[i], x, y + i);
+			buf.draw(thing[i], x, y + i);
 		}
-		buffer.render();
+		buf.render();
 	}
 	let blobX = 0; let blobY = 0;
+	let blehX = 0; let blehY = 0;
 	second.render();
 	drawThing(blobX, blobY, blob);
+	drawThing(blehX, blehY, bleh);
 
 	const keypress = require('keypress');
 	keypress(process.stdin);
@@ -78,8 +73,13 @@ async function test() {
 			case 'right': if (blobX < bufferWidth - blob[0].length - 1) blobX += 2; break;
 			case 'up': if (blobY > 0) blobY--; break;
 			case 'down': if (blobY < bufferHeight - blob.length) blobY++; break;
+			case 'w': if (blehY > 0) blehY--; break;
+			case 'a': if (blehX > 1) blehX -= 2; break;
+			case 's': if (blehY < bufferHeight - 10 - bleh.length) blehY++; break;
+			case 'd': if (blehX < bufferWidth - 20 - bleh[0].length - 1) blehX += 2; break;
 		}
 		drawThing(blobX, blobY, blob);
+		drawThing(blehX, blehY, bleh);
 		if (keyPressed == 'space') {
 			stdout.cursorTo(0,0);
 			// let current = manager.zList.head;

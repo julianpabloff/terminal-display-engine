@@ -22,16 +22,37 @@ const BufferManager = function() {
 		for (const buffer of this.zArray) {
 			const index = buffer.screenToIndex(x, y);
 			if (found && index != null) {
-				if (buffer.previous[index] == undefined) return false;
-				if (buffer.previous[index] != 0) return true;
+				// if (buffer.previous[index] == undefined) return false;
+				const code = buffer.previous[index];
+				if (code != 0) {
+					return true;
+				}
 			}
 			if (buffer.id == target.id) found = true;
+		}
+		return false;
+	}
+	this.somethingBelow = function(target, x, y) {
+		let found = false;
+		for (let i = this.zArray.length - 1; i >= 0; i--) {
+			const buffer = this.zArray[i];
+			const index = buffer.screenToIndex(x, y);
+			if (found && index != null) {
+				const code = buffer.previous[index];
+				const color = buffer.prevColors[index];
+				if (code != 0 || color != 0) return {
+					char: code,
+					color: color
+				};
+			}
+			if (buffer.id == target.id) found = true; 
 		}
 		return false;
 	}
 
 	// Colors
 	this.color = 0;
+	this.lastRenderedColor = 0;
 	this.colors = { reset: 0, black: 1, red: 2, green: 3, yellow: 4, blue: 5, magenta: 6, cyan: 7, white: 8 };
 	this.setFg = function(color) {
 		const fgCode = this.colors[color];
@@ -78,10 +99,7 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 	this.coordinateIndex = (x, y) => (y * this.width) + x; // buffer x & y to buffer array index
 	this.indexToScreen = (index) => { return {x: this.x + (index % this.width), y: this.y + Math.floor(index / this.width)} }
 	this.screenToIndex = function(x, y) {
-		if (this.outlined)
-			if (x < this.x - 1 || x > this.x + width || y < this.y - 1 || y > this.y + this.height) return null;
-		else
-			if (x < this.x || x >= this.x + this.width || y < this.y || y >= this.y + this.height) return null;
+		if (x < this.x || x >= this.x + this.width || y < this.y || y >= this.y + this.height) return null;
 		return ((y - this.y) * this.width) + x - this.x;
 	}
 
@@ -120,40 +138,47 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 	}
 	let drawCount = 0;
 	let colorChangeCount = 0;
-	let currentColor = { fg: 0, bg: 0 };
 	this.render = function(clearLastFrame = true, debug = false) {
 		for (let i = 0; i < this.size; i++) {
 			const screenLocation = this.indexToScreen(i);
-			let code = this.current[i];
+			const code = this.current[i];
+			let drawingCode = code;
 			const prevCode = this.previous[i];
 			const colorCode = this.colors[i];
+			let drawingColorCode = colorCode;
 			const prevColorCode = this.prevColors[i];
 			if (code == 0 && clearLastFrame) {
-				code = 32;
+				const below = manager.somethingBelow(this, screenLocation.x, screenLocation.y);
+				if (below) {
+					drawingCode = below.char;
+					drawingColorCode = below.color;
+				} else {
+					drawingCode = 32;
+					// drawingColorCode = 0;
+				}
 			}
 			if (code != prevCode || colorCode != prevColorCode) {
 				if (!manager.somethingAbove(this, screenLocation.x, screenLocation.y)) {
-					const fgCode = colorCode >> 4;
-					const bgCode = colorCode & 0x0F;
-					if (fgCode != currentColor.fg || bgCode != currentColor.bg) {
+					const fgCode = drawingColorCode >> 4;
+					const bgCode = drawingColorCode & 0x0F;
+					if (drawingColorCode != manager.lastRenderedColor) {
 						if (fgCode == 0 || bgCode == 0) {
 							process.stdout.write('\x1b[0m');
-							currentColor.fg = currentColor.bg = 0;
 						}
 						if (fgCode > 0) {
 							process.stdout.write('\x1b[' + (29 + fgCode).toString() + 'm');
-							currentColor.fg = fgCode;
 						}
 						if (bgCode > 0) {
 							process.stdout.write('\x1b[' + (39 + bgCode).toString() + 'm');
-							currentColor.bg = bgCode;
 						}
 					}
-					drawToScreen(String.fromCharCode(code), screenLocation.x, screenLocation.y);
+					drawToScreen(String.fromCharCode(drawingCode), screenLocation.x, screenLocation.y);
+					manager.lastRenderedColor = drawingColorCode;
 					drawCount++;
 				}
 			}
 			this.current[i] = 0;
+			// this.previous[i] = (code == 32) ? 0 : code;
 			this.previous[i] = code;
 			this.colors[i] = 0;
 			this.prevColors[i] = colorCode;
