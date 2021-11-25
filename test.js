@@ -5,11 +5,7 @@ const rows = stdout.rows;
 const columns = stdout.columns;
 
 async function wait(miliseconds) {
-	return new Promise(function(resolve) {
-		setTimeout(() => {
-			resolve();
-		}, miliseconds);
-	});
+	return new Promise(resolve => setTimeout(resolve, miliseconds));
 }
 
 async function test() {
@@ -24,9 +20,9 @@ async function test() {
 	const bufferY = Math.floor(rows / 2 - bufferHeight / 2);
 
 	const manager = new BufferManager();
-	const buffer = manager.newBuffer(bufferX, bufferY, bufferWidth, bufferHeight);
-	const second = manager.newBuffer(bufferX, bufferY, bufferWidth, bufferHeight, 2);
-	const middle = manager.newBuffer(bufferX + 20, bufferY + 10, 20, 2, 1);
+	const buffer = manager.new(bufferX, bufferY, bufferWidth, bufferHeight);
+	const second = manager.new(bufferX, bufferY, bufferWidth, bufferHeight, 2);
+	const middle = manager.new(bufferX + 20, bufferY + 10, 20, 2, 1);
 	buffer.outline('red');
 
 	const blob = [
@@ -100,4 +96,190 @@ async function test() {
 		}
 	});
 }
-test();
+// test();
+
+async function test2() {
+	stdout.write('\x1b[2J'); // clear screen
+	stdout.write('\x1b[?25l'); // hide cursor
+
+	const bufferWidth = 60;
+	const bufferHeight = 40;
+	const bufferX = Math.floor(columns / 2 - bufferWidth / 2);
+	const bufferY = Math.floor(rows / 2 - bufferHeight / 2);
+	const manager = new BufferManager();
+	const buffer = manager.new(bufferX, bufferY, bufferWidth, bufferHeight);
+	buffer.outline('cyan');
+	buffer.fill('cyan');
+
+	// const keypress = require('keypress');
+	// keypress(process.stdin);
+	// process.stdin.setRawMode(true);
+	// process.stdin.on('keypress', function(chunk, key) {
+	// 	const keyPressed = (key == undefined) ? chunk : key.name;
+	// 	if (keyPressed == 'escape') {
+	// 		stdout.cursorTo(0, rows - 2);
+	// 		stdout.write('\x1b[?25h\x1b[0m'); // show cursor
+	// 		process.exit();
+	// 	}
+	// });
+
+	// const PixelEngine = require('./pixels.js');
+	// const pixel = new PixelEngine();
+	const grid = [
+		[2, 3, 5, 0, 7, 3],
+		[6, 5, 0, 4, 2, 8],
+		[6, 5, 0, 4, 2, 8],
+		[6, 5, 0, 4, 2, 8],
+		[6, 5, 0, 4, 2, 8],
+		// [2, 3, 5, 0],
+		// [6, 5, 0, 4],
+	];
+	const card = [];
+	const topRow = [7];
+	for (let i = 0; i < 44; i++) topRow.push(1);
+	topRow.push(7);
+	card.push(topRow);
+	const secondRow = [1,1];
+	for (let i = 0; i < 41; i++) secondRow.push(8);
+	secondRow.push(1,1,1);
+	card.push(secondRow);
+	for (let i = 0; i < 59; i++) {
+		const row = [1];
+		for (let i = 0; i < 43; i++) row.push(8);
+		row.push(1,1);
+		card.push(row);
+	}
+	card.push(secondRow, Array(46).fill(1), topRow);
+
+	const ten = [
+		[2,8,2,2,2],
+		[2,8,2,8,2],
+		[2,8,2,8,2],
+		[2,8,2,8,2],
+		[2,8,2,2,2]
+	];
+	const heart = [
+		[8,2,8,2,8],
+		[2,2,2,2,2],
+		[2,2,2,2,2],
+		[8,2,2,2,8],
+		[8,8,2,8,8],
+	];
+	const bigHeart = [
+		[8,8,8,8,8,8,8,8,8],
+		[8,2,2,2,8,2,2,2,8],
+		[2,2,2,2,2,2,2,2,2],
+		[2,2,2,2,2,2,2,2,2],
+		[2,2,2,2,2,2,2,2,2],
+		[8,2,2,2,2,2,2,2,8],
+		[8,8,2,2,2,2,2,8,8],
+		[8,8,8,2,2,2,8,8,8],
+		[8,8,8,8,2,8,8,8,8],
+		[8,8,8,8,8,8,8,8,8]
+	];
+	const bigClub = [
+		[8,8,8,1,1,1,8,8,8],
+		[8,8,1,1,1,1,1,8,8],
+		[8,8,1,1,1,1,1,8,8],
+		[8,8,8,1,1,1,8,8,8],
+		[8,1,1,8,1,8,1,1,8],
+		[1,1,1,1,1,1,1,1,1],
+		[1,1,1,1,1,1,1,1,1],
+		[8,1,1,8,1,8,1,1,8],
+		[8,8,8,8,1,8,8,8,8],
+		[8,8,1,1,1,1,1,8,8]
+	];
+	const tenMap = [
+		{x: 10, y: 6, inverted: false},
+		{x: 26, y: 6, inverted: false},
+		{x: 18, y: 13, inverted: false},
+		{x: 10, y: 20, inverted: false},
+		{x: 26, y: 20, inverted: false},
+		{x: 10, y: 48, inverted: true},
+		{x: 26, y: 48, inverted: true},
+		{x: 18, y: 41, inverted: true},
+		{x: 10, y: 34, inverted: true},
+		{x: 26, y: 34, inverted: true},
+	];
+	buffer.enablePixels();
+
+	buffer.pixel.fill('cyan');
+	buffer.pixel.draw(card, 1, 1);
+	// buffer.pixel.draw(ten, 4, 4);
+	// buffer.pixel.draw(heart, 4, 10);
+	// let bigSuit = bigClub;
+	// for (let map of tenMap) {
+	// 	let output = [];
+	// 	let y = map.y;
+	// 	if (map.inverted) {
+	// 		y -= 1;
+	// 		// for (let i = bigSuit.length - 1; i >= 0; i--)
+	// 		// 	output.push(bigSuit[i]);
+	// 	}
+	// 	buffer.pixel.draw(bigSuit, 1 + map.x, 1 + y, map.inverted);
+	// }
+	const design = require('./cardDesign.json');
+	const suitColorMap = {h: 2, c: 1, d: 2, s: 1};
+	function drawCard(value, suit) {
+		const valueGrid = design.values[value];
+		const valueOutput = [];
+		for (let i = 0; i < valueGrid.length; i++) {
+			valueOutput.push([]);
+			for (let j = 0; j < valueGrid[i].length; j++)
+				if (valueGrid[i][j]) valueOutput[i].push(suitColorMap[suit]);
+				else valueOutput[i].push(8);
+		}
+		const smallSuit = design.smallSuits[suit];
+		buffer.pixel.draw(valueOutput, 4, 4);
+		buffer.pixel.draw(smallSuit, 4, 10);
+		const bigSuit = design.bigSuits[suit];
+		for (let map of design.maps[value]) {
+			let y = map.y;
+			if (map.inverted) y--;
+			buffer.pixel.draw(bigSuit, 1 + map.x, 1 + y, map.inverted);
+		}
+		buffer.pixel.draw(valueOutput, 38, 56, true);
+		buffer.pixel.draw(smallSuit, 38, 49, true);
+		buffer.pixel.apply();
+		buffer.render();
+	}
+	drawCard(0, 'c');
+	await wait(20);
+	drawCard(0, 'h');
+	await wait(20);
+	drawCard(0, 'c');
+	await wait(20);
+	drawCard(0, 'h');
+	await wait(20);
+	drawCard(0, 'c');
+	await wait(1000);
+	drawCard(0, 'h');
+	await wait(20);
+	drawCard(0, 'c');
+	await wait(20);
+	drawCard(0, 'h');
+	await wait(20);
+	drawCard(0, 'c');
+	await wait(20);
+	drawCard(0, 'h');
+
+	stdout.cursorTo(0, rows - 2);
+	stdout.write('\x1b[?25h\x1b[0m'); // show cursor
+}
+test2();
+
+async function test3() {
+	stdout.write('\x1b[2J'); // clear screen
+	stdout.write('\x1b[?25l'); // hide cursor
+	const width = 10;
+	const height = 4;
+	const bufferX = Math.floor(columns / 2 - width / 2);
+	const bufferY = Math.floor(rows / 2 - height / 2);
+	const manager = new BufferManager();
+	const pixel = manager.newPixel(bufferX, bufferY, width, height);
+
+	pixel.draw('red', 2, 2);
+
+	stdout.write('\x1b[?25h\x1b[0m'); // show cursor
+}
+// test3();

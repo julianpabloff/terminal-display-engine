@@ -1,3 +1,4 @@
+const PixelBuffer = require('./pixel_buffer.js');
 const BufferManager = function() {
 	function sortedIndex(array, value) {
 		let low = 0;
@@ -10,11 +11,14 @@ const BufferManager = function() {
 		return low;
 	}
 	this.zArray = [];
-	this.newBuffer = function(x, y, width, height, zIndex = 0) {
+	this.new = function(x, y, width, height, zIndex = 0) {
 		const buffer = new DisplayBuffer(x, y, width, height, this, zIndex);
 		if (this.zArray.length > 0) this.zArray.splice(sortedIndex(this.zArray, zIndex), 0, buffer);
 		else this.zArray.push(buffer);
 		return buffer;
+	}
+	this.newPixel = function(x, y, width, height, zIndex = 0) {
+		return new PixelBuffer(x, y, width, height, this, zIndex);
 	}
 	this.somethingAbove = function(target, x, y) {
 		let found = false;
@@ -62,6 +66,7 @@ const BufferManager = function() {
 		const bgCode = this.colors[background];
 		this.color = (fgCode << 4) + bgCode;
 	}
+	this.setColorCode = code => this.color = code;
 	this.resetColor = function() {
 		this.color = 0;
 	}
@@ -99,23 +104,25 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 
 	// Writing to buffer
 	let cursorIndex = 0;
-	this.print = function(string, index) {
+	const print = function(string, index) {
 		for (let i = 0; i < string.length; i++) {
 			this.current[index + i] = string.charCodeAt(i);
 			this.colors[index + i] = manager.color;
 		}
 		cursorIndex = index + string.length;
 		if (cursorIndex > this.size) cursorIndex = this.size;
-	}
+	}.bind(this);
 	this.cursorTo = function(x, y) {
 		cursorIndex = this.coordinateIndex(x, y);
 	}
 	this.write = function(string) {
-		this.print(string, cursorIndex);
+		print(string, cursorIndex);
+		return this;
 	}
 	this.draw = function(string, x, y) {
 		const index = this.coordinateIndex(x, y);
-		this.print(string, index);
+		print(string, index);
+		return this;
 	}
 	this.erase = function(x, y, count = 1) {
 		const index = this.coordinateIndex(x, y);
@@ -123,6 +130,7 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 			this.current[index + i] = 0;
 			this.colors[index + i] = 0;
 		}
+		return this;
 	}
 
 	// Rendering buffer
@@ -130,9 +138,9 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 		process.stdout.cursorTo(x, y);
 		process.stdout.write(string);
 	}
-	this.render = function(clearLastFrame = true, debug = false) {
+	this.render = function(clearLastFrame = true) {
 		for (let i = 0; i < this.size; i++) {
-			const code = this.current[i];
+			let code = this.current[i];
 			const prevCode = this.previous[i];
 			const colorCode = this.colors[i];
 			const prevColorCode = this.prevColors[i];
@@ -146,6 +154,7 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 					drawingCode = below.char;
 					drawingColorCode = below.color;
 				} else {
+					if (!this.transparent) code = 32;
 					drawingCode = 32;
 					drawingColorCode = 0;
 				}
@@ -163,9 +172,11 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 					manager.lastRenderedColor = drawingColorCode;
 				}
 			}
-			this.current[i] = 0;
+			if (clearLastFrame) {
+				this.current[i] = 0;
+				this.colors[i] = 0;
+			}
 			this.previous[i] = code;
-			this.colors[i] = 0;
 			this.prevColors[i] = colorCode;
 		}
 	}
@@ -199,6 +210,18 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 		this.current = new Uint16Array(savedBuffer);
 		this.colors = new Uint8Array(savedColors);
 		this.render();
+	}
+	this.loadArea = function(x, y, width = 1, height = 1) {
+		const area = width * height;
+		let index = this.coordinateIndex(x, y);
+		let i = 0;
+		do {
+			this.current[index] = savedBuffer[index];
+			this.colors[index] = savedColors[index];
+			i++;
+			if (i % width == 0) index = this.coordinateIndex(x, y + (i / width));
+			else index++;
+		} while (i < area);
 	}
 
 	this.clear = function() {
@@ -243,6 +266,10 @@ const DisplayBuffer = function(x, y, width, height, manager, zIndex = 0) {
 	}
 	this.outline.clear = () => {
 		if (this.outlined) this.outline('reset', false);
+	}
+	this.enablePixels = function() {
+		const PixelEngine = require('./pixels.js');
+		this.pixel = new PixelEngine(manager, this);
 	}
 }
 
