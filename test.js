@@ -22,7 +22,7 @@ async function test() {
 	const manager = new BufferManager();
 	const buffer = manager.new(bufferX, bufferY, bufferWidth, bufferHeight);
 	const second = manager.new(bufferX, bufferY, bufferWidth, bufferHeight, 2);
-	const middle = manager.new(bufferX + 20, bufferY + 10, 20, 2, 1);
+	const middle = manager.new(bufferX + 20, bufferY + 10, 20, 3, 1);
 	buffer.outline('red');
 
 	const blob = [
@@ -44,7 +44,7 @@ async function test() {
 	function drawThing(x, y, thing) {
 		let buf = (thing == blob) ? buffer : second;
 		if (thing == blob) manager.setColor('white', 'green');
-		else manager.setColor('black', 'blue');
+		else manager.setColor('blue', 'none');
 		for (let i = 0; i < thing.length; i++) {
 			buf.draw(thing[i], x, y + i);
 		}
@@ -56,9 +56,9 @@ async function test() {
 	drawThing(blobX, blobY, blob);
 	await wait(1000);
 	middle.transparent = false;
-	middle.fill('red');
-	manager.setColor('red', 'yellow');
-	middle.draw('julian', 10, 0);
+	middle.fill('white');
+	manager.setColor('red', 'none');
+	middle.draw('julian', 10, 1);
 	middle.render();
 
 	const keypress = require('keypress');
@@ -82,13 +82,7 @@ async function test() {
 		if (moved == 'bleh') drawThing(blehX, blehY, bleh);
 		if (keyPressed == 'space') {
 			stdout.cursorTo(0,0);
-			// let current = manager.zList.head;
-			// while (current) {
-			// 	console.log(current.zIndex);
-			// 	current = current.next;
-			// }
-			// console.log(manager.zList);
-			console.log(manager.zArray);
+			console.log(manager.screens);
 		} else if (keyPressed == 'escape') {
 			stdout.cursorTo(0, rows - 2);
 			stdout.write('\x1b[?25h\x1b[0m'); // show cursor
@@ -96,7 +90,6 @@ async function test() {
 		}
 	});
 }
-// test();
 
 async function test2() {
 	stdout.write('\x1b[2J'); // clear screen
@@ -263,23 +256,99 @@ async function test2() {
 	await wait(20);
 	drawCard(0, 'h');
 
-	stdout.cursorTo(0, rows - 2);
+	stdout.cursorTo(0, rows - 2); // move cursor
 	stdout.write('\x1b[?25h\x1b[0m'); // show cursor
 }
-test2();
 
 async function test3() {
 	stdout.write('\x1b[2J'); // clear screen
 	stdout.write('\x1b[?25l'); // hide cursor
-	const width = 10;
-	const height = 4;
+	const width = 30;
+	const height = 8;
 	const bufferX = Math.floor(columns / 2 - width / 2);
 	const bufferY = Math.floor(rows / 2 - height / 2);
 	const manager = new BufferManager();
-	const pixel = manager.newPixel(bufferX, bufferY, width, height);
+	const buffer = manager.new(bufferX, bufferY, width, height, 'one');
+	const second = manager.new(bufferX + 20, bufferY + 3, width, height, 'one', 1);
+	const other = manager.new(bufferX - 5, bufferY - 3, width, height, 'two');
 
-	pixel.draw('red', 2, 2);
+	const bleh = [
+		'00000000000',
+		'00000000000',
+		'00000000000',
+		'00000000000',
+		'00000000000',
+	];
+	buffer.outline('green');
+	second.outline('blue');
+	other.outline('red');
+	manager.setFg('magenta');
+	for (let i = 0; i < bleh.length; i++)
+		buffer.draw(bleh[i], 15, 3 + i);
+	buffer.render();
+	manager.setFg('yellow');
+	for (let i = 0; i < bleh.length; i++)
+		second.draw(bleh[i], 1, 1 + i);
+	second.render();
+	await wait(1000);
+	manager.switch('two');
+	await wait(1000);
+	manager.switch('one');
 
+
+	stdout.cursorTo(0, rows - 2); // move cursor
 	stdout.write('\x1b[?25h\x1b[0m'); // show cursor
 }
+
+async function test4() {
+	stdout.write('\x1b[2J'); // clear screen
+	stdout.write('\x1b[?25l'); // hide cursor
+	const width = process.stdout.columns;
+	const height = process.stdout.rows;
+	const manager = new BufferManager();
+	const buffer = manager.new(0, 0, width, height);
+	buffer.fill('red').simpleRender();
+
+	const bleh = [
+		'00000000000',
+		'00000000000',
+		'00000000000',
+		'00000000000',
+		'00000000000',
+	];
+	function drawThing(x, y) {
+		buffer.fill('red');
+		manager.setFg('white');
+		for (let i = 0; i < bleh.length; i++)
+			buffer.draw(bleh[i], x, y + i);
+		buffer.simpleRender();
+	}
+	let blehX = 0;
+	let blehY = 0;
+	drawThing(0,0);
+
+	let x = 0;
+	const interval = setInterval(() => {
+		if (x == width - bleh[0].length - 3) x = 0;
+		drawThing(x, 10);
+		x += 2;
+	}, 3);
+
+	const keypress = require('keypress');
+	keypress(process.stdin);
+	process.stdin.setRawMode(true);
+
+	process.stdin.on('keypress', function(chunk, key) {
+		const keyPressed = (key == undefined) ? chunk : key.name;
+		switch (keyPressed) {
+			case 'escape':
+				stdout.cursorTo(0, rows - 2);
+				stdout.write('\x1b[?25h\x1b[0m'); // show cursor
+				process.exit();
+		}
+	});
+}
+// test();
+test2();
 // test3();
+// test4();

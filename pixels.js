@@ -1,10 +1,4 @@
 const PixelEngine = function(manager, buffer) {
-	// const grid = [
-	// 	[2, 3, 5, 0, 7, 3],
-	// 	[6, 5, 0, 4, 2, 8],
-	// ];
-	// [▀,▀,▀, ],
-	// [ , , , ]
 	this.size = buffer.size * 2;
 	this.grid = new Uint8Array(this.size);
 	this.drawGrid = function(grid, x, y) {
@@ -32,9 +26,6 @@ const PixelEngine = function(manager, buffer) {
 				}
 			}
 		}
-		// return output;
-		// process.stdout.cursorTo(0,5);
-		// console.log(output);
 		let i = 0;
 		lastColor = manager.setColorCode(output[0][0].color);
 		manager.setColorCode(lastColor);
@@ -50,7 +41,6 @@ const PixelEngine = function(manager, buffer) {
 			}
 			i++;
 		}
-		// buffer.render();
 		return buffer;
 	}
 	const colors = { reset: 0, black: 1, red: 2, green: 3, yellow: 4, blue: 5, magenta: 6, cyan: 7, white: 8 };
@@ -94,7 +84,7 @@ const PixelEngine = function(manager, buffer) {
 		let i = 0;
 		lastColor = manager.setColorCode(output[0][0].color);
 		manager.setColorCode(lastColor);
-		buffer.cursorTo(0,0);
+			buffer.cursorTo(0,0);
 		for (const pixelArray of output) {
 			for (let pixelPair of pixelArray) {
 				const color = pixelPair.color;
