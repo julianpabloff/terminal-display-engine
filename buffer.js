@@ -285,10 +285,6 @@ const BufferManager = function() {
 				newColors[i] = color;
 				bufferHere = true;
 				if (point.code && point.fg && point.bg) break;
-				// if (code != codeOnScreen || color != colorOnScreen) {
-				// 	this.addToOutput(output, code, color, x, y);
-				// 	break;
-				// }
 			}
 			if (point.code || point.fg || point.bg) {
 				const outputColor = (point.fg << 4) + point.bg;
@@ -299,17 +295,11 @@ const BufferManager = function() {
 					if (allScreenCode && (allScreenCode != codeOnScreen || allScreenColor != colorOnScreen)) {
 						newCodes[i] = allScreenCode;
 						newColors[i] = allScreenColor;
-						// this.addToOutput(output, allScreenCode, allScreenColor, x, y);
-						// process.stdout.write(this.moveCursorString(x, y) + '*');
 					} else if (!allScreenCode) {
 						newCodes[i] = 0;
 						newColors[i] = 0;
-						// this.addToOutput(output, 32, 0, x, y);
-						// process.stdout.write(this.moveCursorString(x, y) + '#');
 					}
 				}
-			// } else if (bufferHere) {
-			// 	process.stdout.write(this.moveCursorString(x, y) + '#');
 			}
 		}
 		for (const buffer of zArray) if (buffer.screen != 'all') buffer.clearDraw();
@@ -357,14 +347,6 @@ const BufferManager = function() {
 }
 
 const DisplayBuffer = function(x, y, width, height, manager, screen, zIndex = 0) {
-	// this.x = x;
-	// this.y = y;
-	// this.width = width;
-	// this.height = height;
-	// this.end = width - 1;
-	// this.bottom = height - 1;
-	// this.size = width * height;
-	// this.empty = true;
 	this.outlined = false;
 	this.screen = screen;
 	this.zIndex = zIndex;
